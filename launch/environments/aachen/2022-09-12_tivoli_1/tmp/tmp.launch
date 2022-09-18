@@ -1,0 +1,45 @@
+<launch>
+
+    <!--        THIS IS NOT SOMETHING YOU CAN ACTUALLY LAUNCH   -->
+
+    <include file="$(find dynamic_robot_localization)/launch/dynamic_robot_localization_system_6dof.launch" if="$(arg use_dynamic_robot_localization)">
+		<!-- frame ids -->
+        <arg name="map_frame_id" default="$(arg map_frame_id)" />
+        <arg name="odom_frame_id" default="$(arg odom_frame_id)" />
+        <arg name="base_link_frame_id" default="$(arg base_link_frame_id)" />
+        <arg name="sensor_frame_id" default="$(arg sensor_frame_id)" />
+
+        <!-- reference map data -->
+        <arg name="reference_pointcloud_filename" default="$(arg reference_pointcloud_filename)" />
+        <arg name="reference_pointcloud_available" default="true" /> <!-- if false, drl will perform slam (simultaneous localization and mapping) -->
+
+        <!-- sensor data from point cloud topic -->
+        <arg name="ambient_pointcloud_topic" default="$(arg ambient_pointcloud_topic)" />
+
+        <!-- main configurations -->
+        <arg name="pcl_verbosity_level" default="DEBUG" /> <!-- VERBOSE | DEBUG | INFO | WARN | ERROR | ALWAYS || ALWAYS -> no console output -->
+        <arg name="ros_verbosity_level" default="INFO" /> <!-- DEBUG | INFO | WARN | ERROR | FATAL -->
+        
+        <arg name="yaml_configuration_filters_filename" default="$(arg yaml_configuration_filters_filename)"/>
+		<arg name="yaml_configuration_pose_estimation_filename" default="$(arg yaml_configuration_pose_estimation_filename)" />
+		<arg name="yaml_configuration_tracking_filename" default="$(arg yaml_configuration_tracking_filename)" />
+		<arg name="yaml_configuration_recovery_filename" default="$(arg yaml_configuration_recovery_filename)" />
+
+
+        <!-- initial pose setup -->
+        <arg name="robot_initial_pose_in_base_to_map" default="$(arg robot_initial_pose_in_base_to_map)" />
+        <arg name="robot_initial_pose_available" default="$(arg robot_initial_pose_available)" />
+        <arg name="robot_initial_x" default="$(arg robot_initial_x)" />
+        <arg name="robot_initial_y" default="$(arg robot_initial_y)" />
+        <arg name="robot_initial_z" default="$(arg robot_initial_z)" />
+        <arg name="robot_initial_roll" default="$(arg robot_initial_roll)" />
+        <arg name="robot_initial_pitch" default="$(arg robot_initial_pitch)" />
+        <arg name="robot_initial_yaw" default="$(arg robot_initial_yaw)" />
+
+        <arg name="invert_tf_transform" default="$(arg invert_tf_transform)" />
+        <arg name="invert_tf_hierarchy" default="$(arg invert_tf_hierarchy)" />
+
+        <arg name="use_octomap_for_dynamic_map_update" default="$(arg use_octomap_for_dynamic_map_update)" />
+
+	</include>
+</launch>

@@ -1,0 +1,570 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+    <!-- === argument === -->
+    <arg name="show_rviz" default="1" />
+	<arg name="show_plots" default="0" />
+    <arg name="pcl_verbosity_level" default="DEBUG" /> <!-- VERBOSE | DEBUG | INFO | WARN | ERROR | ALWAYS || ALWAYS -> no console output -->
+	<arg name="ros_verbosity_level" default="DEBUG" /> <!-- DEBUG | INFO | WARN | ERROR | FATAL -->
+
+
+    <!-- === localization systems === -->
+    <arg name="use_no_localization_system" default="0" />
+	<arg name="use_odometry_as_localization_system" default="0" /> <!-- Guess: what to localize-->
+    <!-- hier: turned use_odometry_as_localization_system off-->
+	
+    <arg name="use_dynamic_robot_localization" default="1" />
+    <arg name="use_static_odometry_tf" default="1" />
+	<arg name="use_amcl" default="0" /> <!-- only 2D -->
+	<arg name="use_amcl_simulated" default="0" />
+	<arg name="use_ekf" default="0" />
+	<arg name="use_gmapping" default="0" />
+	<arg name="use_hector" default="0" />
+	<arg name="use_crsm" default="0" />
+	<!-- ETH Zuerich Stuff -->
+    <arg name="use_ethzasl_icp_mapper" default="0" />
+	<arg name="ethzasl_icp_mapper_min_registration_overlap" default="0.47" />
+	<arg name="ethzasl_icp_mapper_icp_config_filename" default="icp.yaml" />
+
+
+    <!-- === rosbag recording settings === -->
+    <arg name="record_rosbags" default="0" />
+	<arg name="record_rosbags_topics" default="" /> <!-- if empty should record all-->
+	<arg name="compress_rosbags" default="1" />
+	
+	<arg name="record_localization_results" default="0" />
+	<arg name="record_localization_results_paths" default="0" />
+	<arg name="record_localization_system_resources_usage" default="0" />
+	<arg name="record_parameters" default="0" />
+	<arg name="record_rosbags_options" default="--bz2" if="$(arg compress_rosbags)"/>
+	<arg name="record_rosbags_options" default="" unless="$(arg compress_rosbags)"/>
+	<arg name="record_localization_results_topics" default="/dynamic_robot_localization/diagnostics /dynamic_robot_localization/localization_detailed /dynamic_robot_localization/localization_pose /dynamic_robot_localization/localization_error /dynamic_robot_localization/odometry_error /dynamic_robot_localization/localization_times /dynamic_robot_localization/reference_keypoints /dynamic_robot_localization/ambient_keypoints /dynamic_robot_localization/localization_initial_pose_estimations /dynamic_robot_localization/aligned_pointcloud_inliers /dynamic_robot_localization/aligned_pointcloud_outliers /dynamic_robot_localization/ambient_pointcloud_filtered /guardian/base_pose_ground_truth /pose_ground_truth /tf /tf_static /rosout /amcl_pose /particlecloud" if="$(arg use_dynamic_robot_localization)"/>
+	<arg name="record_localization_results_topics" default="/amcl/localization_error /amcl/odometry_error /guardian/base_pose_ground_truth /pose_ground_truth /tf /tf_static /rosout /amcl_pose /particlecloud" if="$(arg use_amcl)"/>
+	<arg name="record_localization_results_topics" default="/ethzasl_icp_mapper/groundtruth_poses /ethzasl_icp_mapper/localization_error /ethzasl_icp_mapper/localization_poses /icp_pose /trajectory /trajectory_gt /trajectory_drl /trajectory_odom /rosout /tf" if="$(arg use_ethzasl_icp_mapper)" />
+	<arg name="record_localization_results_topics" default="" if="$(arg use_no_localization_system)" />
+
+    <!-- === rosbag playing setting === -->
+    <arg name="play_rosbags" default="1" />
+	<arg name="play_rosbags_rate" default="1.0" />
+	<arg name="play_rosbags_options" default="" />
+
+    
+    <!-- === gazebo configurations === -->
+    <arg name="use_gazebo" default="0" />
+    <env name="GAZEBO_MODEL_PATH" value='$(find crob_gazebo_models)/models:$(optenv GAZEBO_MODEL_PATH "")' />
+
+
+    <!-- === robot configurations === -->
+    <arg name="twist_topic" default="" /> <!--- hier -->
+	<arg name="imu_topic" default="" /> <!--- hier: /imu/data ? maybe i need a tf for that -->
+	<arg name="odometry_topic" default="" /> <!--- hier -->
+
+
+    <!-- === environment configurations === -->
+    <arg name="use_6_dof" default="1" />
+	<arg name="use_fast_path" default="0" />
+	<arg name="use_tof" default="1" /> <!-- hier -->
+    <arg name="use_lasers" default="1" /> <!-- hier -->
+    <arg name="use_large_map" default="1" /> <!-- hier -->
+
+	<arg name="world_name" default="tivoli_1" />
+	<arg name="world_rosbag_suffix" default="" unless="$(arg use_6_dof)" />
+	<arg name="world_rosbag_suffix" default="_with_tilting_laser" if="$(arg use_6_dof)" />
+	<arg name="world_rosbag_path_suffix" default="" unless="$(arg use_fast_path)" />
+	<arg name="world_rosbag_path_suffix" default="_fast" if="$(arg use_fast_path)" />
+	<arg name="world_rosbag_folder" default="$(find dynamic_robot_localization_tests)/datasets/aachen/2022-09-12_tivoli_1" />
+	<arg name="world_rosbag_filename" default="$(arg world_rosbag_folder)/$(arg world_name)$(arg world_rosbag_suffix)$(arg world_rosbag_path_suffix)" />
+	<arg name="world_rosbag_play_extra_filenames" default="" />
+	<arg name="world_rosbag_results_filename" default="$(arg world_rosbag_filename)_results" />
+
+    
+    <!-- === localzation system selection === -->
+    <!-- dynamic localization system -->
+	<arg name="process_reference_cloud" default="1" /> <!-- hier -->
+	<arg name="recompute_point_features" default="1" />  <!-- hier -->
+	<arg name="load_point_features" default="0" />
+	<arg name="save_point_features" default="0" />
+
+	<arg name="configuration_files_suffix" default="_2d" unless="$(arg use_6_dof)" />
+	<arg name="configuration_files_suffix" default="_3d" if="$(arg use_6_dof)" />
+	<arg name="configuration_files_tof_suffix" default="" unless="$(arg use_tof)" />
+	<arg name="configuration_files_tof_suffix" default="_tof" if="$(arg use_tof)" />
+    <arg name="configuration_file_laser_suffix" default="" unless="$(arg use_lasers)" />
+	<arg name="configuration_file_laser_suffix" default="_lasers" if="$(arg use_lasers)" />
+    <arg name="configuration_file_map_suffix" default="" unless="$(arg use_large_map)" />
+	<arg name="configuration_file_map_suffix" default="_large_map" if="$(arg use_large_map)" />
+
+	<arg name="yaml_configuration_folder" default="$(find dynamic_robot_localization_tests)/launch/environments/aachen/2022-09-12_tivoli_1/configs/"/>
+	<arg name="yaml_configuration_filters_filename" default="$(arg yaml_configuration_folder)filters_large_map_3d_tof_lasers.yaml" />
+	<arg name="yaml_configuration_pose_estimation_filename" default="$(arg yaml_configuration_folder)initial_pose_estimation_3d.yaml" />
+	<arg name="yaml_configuration_tracking_filename" default="$(arg yaml_configuration_folder)cluttered_environments_dynamic_large_map_lasers_3d.yaml" /> <!-- $(arg configuration_files_tof_suffix) am ende entfernt-->
+	<arg name="yaml_configuration_recovery_filename" default="$(arg yaml_configuration_folder)recovery_3d_large_map.yaml" />
+	<!-- hier: maybe convert map file .ply -> .pcd ??-->
+    <arg name="reference_pointcloud_type_3d" default="false" unless="$(arg use_6_dof)" />
+	<arg name="reference_pointcloud_type_3d" default="true" if="$(arg use_6_dof)" />
+	<arg name="reference_pointcloud_update_mode" default="NoIntegration" /> <!-- NoIntegration | FullIntegration | InliersIntegration | OutliersIntegration -->
+	<arg name="reference_pointcloud_filename" default="$(find dynamic_robot_localization_tests)/maps/aachen/2022-09-12_tivoli_1/ply/pointcloud_ds_2022-09-12-09-12-12_loop_closed_sharpened.pcd" if="$(arg process_reference_cloud)" />
+	<arg name="reference_pointcloud_filename" default="$(find dynamic_robot_localization_tests)/maps/aachen/2022-09-12_tivoli_1/cache/pointcloud_ds_2022-09-12-09-12-12_loop_closed_sharpened_preprocessed.pcd" unless="$(arg process_reference_cloud)" />
+	<arg name="reference_pointcloud_preprocessed_save_filename" default="$(find dynamic_robot_localization_tests)/maps/aachen/2022-09-12_tivoli_1/cache/pointcloud_ds_2022-09-12-09-12-12_loop_closed_sharpened_preprocessed.pcd" if="$(arg process_reference_cloud)" />
+	<arg name="reference_pointcloud_preprocessed_save_filename" default="" unless="$(arg process_reference_cloud)" />
+	<arg name="reference_pointcloud_keypoints_filename" default="" if="$(arg recompute_point_features)" />
+	<arg name="reference_pointcloud_keypoints_filename" default="$(find dynamic_robot_localization_tests)/maps/aachen/2022-09-12_tivoli_1/cache/tivoli_1_sift_keypoints_25mm.pcd" unless="$(arg recompute_point_features)" />
+	<arg name="reference_pointcloud_keypoints_save_filename" default="" unless="$(arg recompute_point_features)" />
+	<arg name="reference_pointcloud_keypoints_save_filename" default="$(find dynamic_robot_localization_tests)/maps/aachen/2022-09-12_tivoli_1/cache/tivoli_1_sift_keypoints_25mm.pcd" if="$(arg recompute_point_features)" />
+	<arg name="reference_pointcloud_descriptors_filename" default="" if="$(arg recompute_point_features)" />
+	<arg name="reference_pointcloud_descriptors_filename" default="$(find dynamic_robot_localization_tests)/maps/aachen/2022-09-12_tivoli_1/cache/tivoli_1_fpfh_descriptors_25mm.pcd" unless="$(arg recompute_point_features)" />
+	<arg name="reference_pointcloud_descriptors_save_filename" default="" unless="$(arg recompute_point_features)" />
+	<arg name="reference_pointcloud_descriptors_save_filename" default="$(find dynamic_robot_localization_tests)/maps/aachen/2022-09-12_tivoli_1/cache/cache/tivoli_1_fpfh_descriptors_25mm.pcd" if="$(arg recompute_point_features)" />
+	<arg name="publish_last_pose_tf_timeout_seconds" default="-3.0" /> <!-- hier -->
+
+
+    <!-- === localization system evaluation === -->
+    <arg name="record_localization_system_process_name" default="drl_localization_node" if="$(arg use_dynamic_robot_localization)" />
+	<arg name="record_localization_system_process_name" default="ethzasl_icp_mapper" if="$(arg use_ethzasl_icp_mapper)" />
+	<arg name="record_localization_system_process_name" default="amcl" if="$(arg use_amcl)" />
+	<arg name="record_localization_system_process_name" default="" if="$(arg use_no_localization_system)" />
+
+	<arg name="compute_localization_error" default="1" />
+	<arg name="localization_error_msgs_namespace" default="dynamic_robot_localization" if="$(arg use_dynamic_robot_localization)" />
+	<arg name="localization_error_msgs_namespace" default="ethzasl_icp_mapper" if="$(arg use_ethzasl_icp_mapper)" />
+	<arg name="localization_error_msgs_namespace" default="amcl" if="$(arg use_amcl)" />
+	<arg name="localization_error_msgs_namespace" default="odom" if="$(arg use_no_localization_system)" />
+
+	<arg name="publish_tf_map_odom" default="1" />
+	<arg name="publish_pose_tf_rate" default="-10" />
+	<arg name="map_frame_id" default="map" />
+	<arg name="map_server_frame_id" default="$(arg map_frame_id)" />
+	<arg name="map_server_topic" default="map" />
+	<arg name="map_odom_only_frame_id" default="map_odom_only" />
+	<arg name="odom_frame_id" default="odom" />
+	<arg name="base_link_frame_id" default="base_link" /> <!-- hier: base_footprint -> base_link -->
+	<arg name="sensor_frame_id" default="$(arg base_link_frame_id)" unless="$(arg use_tof)" />
+	<arg name="sensor_frame_id" default="velodyne" if="$(arg use_tof)" /> <!-- hier: camera_optical... -> velodyne -->
+	<arg name="invert_tf_transform" default="true" /> <!-- in 6dof launch file it was true-->
+	<arg name="invert_tf_hierarchy" default="true" />  <!-- in 6dof launch file it was true-->
+	<arg name="transform_pose_to_map_frame_id" default="true" />
+    <!-- hier: not sure what to make of this-->
+	<arg name="map_ground_truth_frame_id" default="map_ground_truth" />
+	<arg name="map_ground_truth_frame_id_source" default="$(arg base_link_frame_id)" />
+	<arg name="localization_ground_truth_frame_id" default="$(arg map_ground_truth_frame_id)" />
+	<arg name="publish_ground_truth" default="true" unless="$(arg play_rosbags)" />
+	<arg name="publish_ground_truth" default="false" if="$(arg play_rosbags)" />
+
+	<arg name="localization_system_pose_stamped_topic" default="localization_pose" if="$(arg use_dynamic_robot_localization)" />
+	<arg name="localization_system_pose_stamped_topic" default="/icp_pose" if="$(arg use_ethzasl_icp_mapper)" />
+	<arg name="localization_system_pose_stamped_topic" default="/amcl_pose" if="$(arg use_amcl)" />
+	<arg name="localization_system_pose_stamped_topic" default="" if="$(arg use_no_localization_system)" />
+	<arg name="ground_truth_pose_stamped_topic" default="" />
+	<arg name="ground_truth_pose_with_covariance_stamped_topic" default="" />
+    <!-- hier: not sure what to make of this-->
+	<arg name="ground_truth_odometry_topic" default="/velodyne/base_pose_ground_truth" />
+	<arg name="ground_truth_filename" default="" />
+	<arg name="ground_truth_tf_time_offset" default="0.0" />
+
+
+    <!-- === rviz configs === -->   <!-- hier: rviz config custom aendern fuer velodyne-->
+    <arg name="rviz_folder" default="$(find dynamic_robot_localization_tests)/rviz/aachen/tivoli" />
+	<arg name="rviz_config" default="-d $(arg rviz_folder)/dynamic_robot_localization_planar.rviz" unless="$(arg use_6_dof)" />
+	<arg name="rviz_config" default="-d $(arg rviz_folder)/dynamic_robot_localization_tridimensional.rviz" if="$(arg use_6_dof)" />
+
+
+    <!-- === 3d maps ===-->
+    <arg name="reference_pointcloud_available" default="1" />
+	<arg name="use_octomap_for_dynamic_map_update" default="0" />
+	<arg name="use_octomap_only_to_build_occupancy_grid" default="0" />
+	<arg name="octomap_pointcloud_topic" default="aligned_pointcloud" />  <!-- ambient_pointcloud | aligned_pointcloud | aligned_pointcloud_outliers | aligned_pointcloud_inliers -->
+	<arg name="octomap_file" default="" />
+	<arg name="octomap_resolution" default="0.01" />
+	<arg name="octomap_minimum_amount_of_time_between_ros_msg_publishing" default="5.0" />
+	<arg name="octomap_minimum_number_of_integrations_before_ros_msg_publishing" default="10" />
+	<arg name="octomap_override_sensor_z" default="true" />
+	<arg name="octomap_override_sensor_z_value" default="0.0" />
+	<!-- <arg name="map_file" default="$(find dynamic_robot_localization_tests)/maps/ship_interior/tridimensional/octomap/ship_interior_10mm.bt" /> -->
+	<!-- <arg name="octomap_file" default="$(find dynamic_robot_localization_tests)/maps/ship_interior/tridimensional/octomap/ship_interior_10mm_dynamic.ot" /> -->
+
+
+    <!-- === 2d maps === --> <!-- hier: can i comment this out? not using 2d maps.. -->
+    <arg name="use_map_server" default="0" />
+	<arg name="map_file" default="$(find dynamic_robot_localization_tests)/maps/ship_interior/planar/ship_interior.yaml" unless="$(arg use_octomap_for_dynamic_map_update)" />
+	<!-- <arg name="map_file" default="$(find dynamic_robot_localization_tests)/maps/ship_interior/planar/ship_interior_10mm.yaml" unless="$(arg use_octomap_for_dynamic_map_update)" /> -->
+	<arg name="map_file" default="$(find dynamic_robot_localization_tests)/maps/ship_interior/planar/ship_interior_dynamic_10cm_height.yaml" if="$(arg use_octomap_for_dynamic_map_update)" />
+	<arg name="initial_2d_map_file" default="$(arg map_file)" />
+
+
+    <!-- === robot initial pose ===-->
+    <arg name="robot_initial_pose_in_base_to_map" default="true" /> <!-- hier: can i false this? i did-->
+	<arg name="robot_initial_pose_available" default="true" /> <!-- hier: can i false this? i did-->
+	<arg name="robot_initial_x" default="0.0062239" />
+	<arg name="robot_initial_y" default="0.0360854" />
+	<arg name="robot_initial_z" default="0.0102594" />
+	<arg name="robot_initial_roll" default="-0.0020551" />
+	<arg name="robot_initial_pitch" default="-0.0214457" />
+	<arg name="robot_initial_yaw" default="0.0066668" />
+
+
+    <!-- === robot sensor configuration === -->
+    <arg name="use_simulated_kinect" default="false" />
+    <arg name="use_velodyne_driver" default="true" />
+    
+	<arg name="use_tilt_on_front_laser" default="0" unless="$(arg use_6_dof)" />
+	<arg name="use_tilt_on_front_laser" default="1" if="$(arg use_6_dof)" />
+	<arg name="use_laser_assembler" default="1" unless="$(arg use_tof)" />
+	<arg name="use_laser_assembler" default="0" if="$(arg use_tof)" />
+
+	<arg name="assemble_lasers_on_map_frame" default="1" /> <!-- if false -> assembles lasers on odom frame --> <!-- hier: 0 -> 1-->
+	<arg name="laser_assembly_frame" default="$(arg map_frame_id)" if="$(arg assemble_lasers_on_map_frame)" />
+	<arg name="laser_assembly_frame" default="$(arg odom_frame_id)" unless="$(arg assemble_lasers_on_map_frame)" />
+	<arg name="number_of_tf_queries_for_spherical_interpolation" default="4" />
+	<arg name="min_range_cutoff_percentage_offset" default="0.00" />    <!-- hier: cutoff was?  "2.00" -> 0-->
+	<arg name="max_range_cutoff_percentage_offset" default="0.00" />    <!-- hier: cutoff was?  "0.95" -> 0-->
+
+	<arg name="laser_scan_topics" default="" /> <!-- hier: /guardian/laser_tilt_front+/guardian/laser_horizontal_back -> ""-->
+	<arg name="laser_scan_topic_amcl" default="" /> <!-- hier: /guardian/laser_tilt_front -> ""-->
+	<arg name="ambient_pointcloud_topic" default="/velodyne_points" unless="$(arg use_tof)" />
+	<arg name="ambient_pointcloud_topic" default="/velodyne_points" if="$(arg use_tof)" /> <!-- hier: /camera/depth/points -> /velodyne_points-->
+	<arg name="reference_costmap_topic" default="/map" />
+	<arg name="reference_pointcloud_topic" default="" />
+
+    <!-- hier: don't think its important, not using laser assembler-->
+	<arg name="relay_back_laser_to_front_laser" default="1" if="$(arg use_amcl)" />
+	<arg name="relay_back_laser_to_front_laser" default="0" unless="$(arg use_amcl)" />
+	<arg name="number_of_scans_to_assemble_per_cloud" default="2" unless="$(arg use_6_dof)" />
+	<arg name="number_of_scans_to_assemble_per_cloud" default="4" if="$(arg use_6_dof)" />
+	<arg name="min_number_of_scans_to_assemble_per_cloud" default="2" />
+	<arg name="max_number_of_scans_to_assemble_per_cloud" default="4" />
+	<arg name="min_timeout_seconds_for_cloud_assembly" default="0.15" />
+	<arg name="max_timeout_seconds_for_cloud_assembly" default="1.1" />
+	<arg name="max_linear_velocity" default="0.025" /> <!-- hier: ?-->
+	<arg name="max_angular_velocity" default="0.174532925" /> <!-- hier: ?-->
+	<arg name="timeout_for_cloud_assembly" default="1.0" /> <!-- hier: ?-->
+
+    <!-- launching velodyne bridge -->
+	<include file="$(find dynamic_robot_localization_tests)/launch/robots/velodyne_bridge.launch" if="$(arg use_velodyne_driver)" />
+
+
+    <!-- === movement paths ===-->
+    <!-- not doing anything, it's turned off by default - i am not changing that-->
+    <arg name="move_robot_on_path" default="0" />
+	<arg name="robot_path" default="$(find dynamic_robot_localization_tests)/maps/ship_interior/path" />
+	<!-- <arg name="system_command_after_path_finished" default="" /> -->
+	<!-- <arg name="system_command_after_path_finished" default="killall -SIGINT rlt_robot_localization_error_node AND killall -SIGINT drl_localization_node" /> -->
+	<arg name="system_command_after_path_finished" if="$(arg record_rosbags)" default="sleep 2 AND killall -SIGINT record" />
+	<arg name="system_command_after_path_finished" unless="$(arg record_rosbags)" default="" />
+	<!-- <arg name="system_command_after_path_finished" unless="$(arg record_rosbags)"
+		default="
+			rosrun dynamic_reconfigure dynparam set /dynamic_robot_localization/laserscan_to_pointcloud_assembler number_of_scans_to_assemble_per_cloud 25 AND
+			rosrun dynamic_reconfigure dynparam set /dynamic_robot_localization/laserscan_to_pointcloud_assembler timeout_for_cloud_assembly 2.5 AND
+			rosrun dynamic_reconfigure dynparam set /dynamic_robot_localization/laserscan_to_pointcloud_assembler laser_scan_topic $(arg laser_scan_topics) AND
+			sleep 10 AND
+			killall -SIGINT rlt_robot_localization_error_node AND
+			killall -SIGINT drl_localization_node" /> -->
+
+
+    <!-- === gazebo simulator === -->
+    <param name="/use_sim_time" type="bool" value="true" if="$(arg play_rosbags)" />
+	<param name="/use_sim_time" type="bool" value="false" unless="$(arg play_rosbags)" />
+    <!-- possibility to generate gazebo simulation and use it here. not doing that. -->
+
+    <node pkg="tf" type="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 $(arg odom_frame_id) $(arg base_link_frame_id) 5" if="$(arg use_static_odometry_tf)" />
+
+
+    <!-- === ground truth === -->
+    <!-- hier: -->
+    <!-- by default: use pose_to_tf_publisher if arg: publish_ground_truth is turned on-->
+    <!-- putting it here incase i want to use it sometime. turned off, maybe turning it on later-->
+    <!-- if using it: make sure to update it-->
+    <node pkg="pose_to_tf_publisher" type="pose_to_tf_publisher_node" name="pose_to_tf_publisher_node_ground_truth" ns="dynamic_robot_localization" output="screen" if="$(arg publish_ground_truth)" >
+		<param name="publish_rate" type="double" value="-1.0" />
+		<param name="pose_stamped_topic" type="str" value="$(arg ground_truth_pose_stamped_topic)" />
+		<param name="pose_with_covariance_stamped_topic" type="str" value="$(arg ground_truth_pose_with_covariance_stamped_topic)" />
+		<param name="odometry_topic" type="str" value="$(arg ground_truth_odometry_topic)" />
+		<param name="poses_filename" type="str" value="$(arg ground_truth_filename)" />
+		<param name="map_frame_id" type="str" value="$(arg map_ground_truth_frame_id)" />
+		<param name="odom_frame_id" type="str" value="" /> <!-- publishes tf [ ground_truth -> base_link ] directly -->
+		<param name="base_link_frame_id" type="str" value="$(arg map_ground_truth_frame_id_source)" />
+		<param name="invert_tf_transform" type="bool" value="true" />
+		<param name="invert_tf_hierarchy" type="bool" value="true" />
+		<param name="tf_time_offset" type="double" value="$(arg ground_truth_tf_time_offset)" />
+		<param name="transform_pose_to_map_frame_id" type="bool" value="false" />
+		<param name="initial_x" type="double" value="$(arg robot_initial_x)" />
+		<param name="initial_y" type="double" value="$(arg robot_initial_y)" />
+		<param name="initial_z" type="double" value="$(arg robot_initial_z)" />
+		<param name="initial_roll" type="double" value="$(arg robot_initial_roll)" />
+		<param name="initial_pitch" type="double" value="$(arg robot_initial_pitch)" />
+		<param name="initial_yaw" type="double" value="$(arg robot_initial_yaw)" />
+	</node>
+
+    <!-- same here, but for error computation-->
+    <!-- if using it: make sure to update it-->
+    <include file="$(find robot_localization_tools)/launch/robot_localization_error.launch" ns="$(arg localization_error_msgs_namespace)" if="$(arg compute_localization_error)" >
+		<arg name="map_frame_id" default="$(arg map_frame_id)" />
+		<arg name="map_odom_only_frame_id" default="$(arg map_odom_only_frame_id)" />
+		<arg name="odom_frame_id" default="$(arg odom_frame_id)" />
+		<arg name="base_link_frame_id" default="$(arg base_link_frame_id)" />
+		<arg name="localization_ground_truth_frame_id" default="$(arg localization_ground_truth_frame_id)" />
+		<arg name="use_degrees_in_angles" default="true" />
+		<arg name="use_millimeters_in_distances" default="true" />
+		<arg name="use_6_dof" default="$(arg use_6_dof)" />
+		<arg name="publish_rate" default="-1.0" />
+		<arg name="pose_publishers_sampling_rate" default="-1" />
+		<arg name="pose_stamped_topic" default="" if="$(arg use_amcl)"/>
+		<arg name="pose_stamped_topic" default="$(arg localization_system_pose_stamped_topic)" unless="$(arg use_amcl)" />
+		<arg name="pose_stamped_with_covariance_pose_topic" default="/amcl_pose" if="$(arg use_amcl)" />
+		<arg name="pose_stamped_with_covariance_pose_topic" default="" unless="$(arg use_amcl)" />
+		<arg name="tf_lookup_timeout" default="0.2" />
+		<arg name="localization_poses_output_filename" default="$(arg world_rosbag_results_filename)_localization_poses.txt" if="$(arg record_localization_results_paths)" />
+		<arg name="localization_poses_output_filename" default="" unless="$(arg record_localization_results_paths)" />
+		<arg name="odom_only_poses_output_filename" default="$(arg world_rosbag_results_filename)_odometry_poses.txt" if="$(arg record_localization_results_paths)" />
+		<arg name="odom_only_poses_output_filename" default="" unless="$(arg record_localization_results_paths)" />
+		<arg name="ground_truth_poses_output_filename" default="$(arg world_rosbag_results_filename)_ground_truth_poses.txt" if="$(arg record_localization_results_paths)" />
+		<arg name="ground_truth_poses_output_filename" default="" unless="$(arg record_localization_results_paths)" />
+		<arg name="save_poses_timestamp" default="true" />
+		<arg name="save_poses_orientation_quaternion" default="true" />
+		<arg name="save_poses_orientation_vector" default="true" />
+	</include>
+
+
+    <!-- === rosbags === -->
+    <node pkg="rosbag" type="record" 	name="rosbag_record" 			args="$(arg record_rosbags_options) -O $(arg world_rosbag_filename).bag $(arg record_rosbags_topics)"																		if="$(arg record_rosbags)" />
+	<node pkg="rosbag" type="record" 	name="rosbag_record_results" 	args="$(arg record_rosbags_options) -O $(arg world_rosbag_results_filename).bag $(arg record_localization_results_topics)"													if="$(arg record_localization_results)" />
+	<node pkg="rosbag" type="play"		name="rosbag_play" 				args="--clock --rate=$(arg play_rosbags_rate) $(arg world_rosbag_filename).bag $(arg world_rosbag_play_extra_filenames) $(arg play_rosbags_options)" 				if="$(arg play_rosbags)" /> <!-- hier: removed  -pause -->
+	
+	<node pkg="robot_localization_tools" type="process_monitor.sh" name="process_monitor_drl" args="$(arg record_localization_system_process_name) $(arg world_rosbag_results_filename)_perf-stat.txt $(arg world_rosbag_results_filename)_hw_resources_usage_log 0.1" if="$(arg record_localization_system_resources_usage)" /> <!-- hier: ?-->
+	<node pkg="robot_localization_tools" type="save_parameters.bash" name="parameter_server_saver" args="$(arg world_rosbag_results_filename)_parameters.yaml 10" if="$(arg record_parameters)" /> <!-- hier: change it to zsh? does it depend on used shell? -->
+
+
+    <!-- === robot movement === -->
+    <!-- not changing anythin here, see above-->
+    <include file="$(find robot_localization_tools)/launch/twist_publisher.launch" ns="dynamic_robot_localization" if="$(arg move_robot_on_path)" >
+		<arg name="yaml_path_file" default="$(arg robot_path)$(arg world_rosbag_path_suffix).yaml" />
+		<arg name="system_command_after_path_finished" default="$(arg system_command_after_path_finished)" />
+	</include>
+
+
+    <!-- === system inspection === -->
+    <node name="rviz" pkg="rviz" type="rviz" args="$(arg rviz_config)" if="$(arg show_rviz)" output="screen" />
+
+
+    <!-- === 2d costmap === -->
+    <!-- not changing anything, not using a costmap or the map_server-->
+    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" output="screen" if="$(arg use_map_server)" >
+		<param name="frame_id" type="str" value="$(arg map_server_frame_id)" />
+		<remap from="map" to="$(arg map_server_topic)" />
+	</node>
+
+    <!-- === merge two LaserScans-->
+    <!-- not doing anything, trigger is turned off-->
+    <!-- also seems to be amcl dependant-->
+	<node pkg="topic_tools" type="relay" name="relay_base_scan_to_tilt_scan" args="/guardian/laser_horizontal_back /guardian/laser_tilt_front" output="screen" if="$(arg relay_back_laser_to_front_laser)" />
+
+
+    <!-- === localization system === -->
+    
+    <include file="$(find dynamic_robot_localization)/launch/dynamic_robot_localization_system.launch" if="$(arg use_dynamic_robot_localization)">
+		<arg name="pcl_verbosity_level" default="$(arg pcl_verbosity_level)" />
+		<arg name="ros_verbosity_level" default="$(arg ros_verbosity_level)" />
+
+        
+        <arg name="ambient_pointcloud_topic" default="$(arg ambient_pointcloud_topic)" />
+		<arg name="reference_costmap_topic" default="$(arg reference_costmap_topic)" />
+		<arg name="reference_pointcloud_topic" default="$(arg reference_pointcloud_topic)" />
+		
+        <arg name="yaml_configuration_filters_filename" default="$(arg yaml_configuration_filters_filename)" />
+		<arg name="yaml_configuration_pose_estimation_filename" default="$(arg yaml_configuration_pose_estimation_filename)" />
+		<arg name="yaml_configuration_tracking_filename" default="$(arg yaml_configuration_tracking_filename)" />
+		<arg name="yaml_configuration_recovery_filename" default="$(arg yaml_configuration_recovery_filename)" />
+		
+        <arg name="robot_initial_pose_in_base_to_map" default="$(arg robot_initial_pose_in_base_to_map)" />
+		<arg name="robot_initial_pose_available" default="$(arg robot_initial_pose_available)" />
+		<arg name="robot_initial_x" default="$(arg robot_initial_x)" />
+		<arg name="robot_initial_y" default="$(arg robot_initial_y)" />
+		<arg name="robot_initial_z" default="$(arg robot_initial_z)" />
+		<arg name="robot_initial_roll" default="$(arg robot_initial_roll)" />
+		<arg name="robot_initial_pitch" default="$(arg robot_initial_pitch)" />
+		<arg name="robot_initial_yaw" default="$(arg robot_initial_yaw)" />
+
+		<arg name="use_laser_assembler" default="$(arg use_laser_assembler)" />
+		<arg name="laser_scan_topics" default="$(arg laser_scan_topics)" />
+		<arg name="min_range_cutoff_percentage_offset" default="$(arg min_range_cutoff_percentage_offset)" />
+		<arg name="max_range_cutoff_percentage_offset" default="$(arg max_range_cutoff_percentage_offset)" />
+        <arg name="number_of_tf_queries_for_spherical_interpolation" default="$(arg number_of_tf_queries_for_spherical_interpolation)" />
+		<arg name="dynamic_update_of_assembly_configuration_from_twist_topic" default="$(arg twist_topic)" />
+		<arg name="dynamic_update_of_assembly_configuration_from_odometry_topic" default="$(arg odometry_topic)" />
+		<arg name="dynamic_update_of_assembly_configuration_from_imu_topic" default="$(arg imu_topic)" />
+		
+        <arg name="map_frame_id" default="$(arg map_frame_id)" />
+		<arg name="odom_frame_id" default="$(arg odom_frame_id)" />
+		<arg name="base_link_frame_id" default="$(arg base_link_frame_id)" />
+		<arg name="sensor_frame_id" default="$(arg sensor_frame_id)" />
+		<arg name="pose_stamped_publish_topic" default="$(arg localization_system_pose_stamped_topic)" />
+		<arg name="publish_tf_map_odom" default="$(arg publish_tf_map_odom)" />
+		<arg name="publish_pose_tf_rate" default="$(arg publish_pose_tf_rate)" />
+		<arg name="invert_tf_transform" default="$(arg invert_tf_transform)" />
+		<arg name="invert_tf_hierarchy" default="$(arg invert_tf_hierarchy)" />
+		<arg name="transform_pose_to_map_frame_id" default="$(arg transform_pose_to_map_frame_id)" />
+
+		<arg name="use_octomap_for_dynamic_map_update" default="$(arg use_octomap_for_dynamic_map_update)" />
+		<arg name="use_octomap_only_to_build_occupancy_grid" default="$(arg use_octomap_only_to_build_occupancy_grid)" />
+		<arg name="octomap_pointcloud_topic" default="$(arg octomap_pointcloud_topic)" />
+		<arg name="octomap_file" default="$(arg octomap_file)" />
+		<arg name="octomap_resolution" default="$(arg octomap_resolution)" />
+		<arg name="octomap_minimum_amount_of_time_between_ros_msg_publishing" default="$(arg octomap_minimum_amount_of_time_between_ros_msg_publishing)" />
+		<arg name="octomap_minimum_number_of_integrations_before_ros_msg_publishing" default="$(arg octomap_minimum_number_of_integrations_before_ros_msg_publishing)" />
+		<arg name="octomap_override_sensor_z" default="$(arg octomap_override_sensor_z)" />
+		<arg name="octomap_override_sensor_z_value" default="$(arg octomap_override_sensor_z_value)" />
+
+		<arg name="initial_2d_map_file" default="$(arg initial_2d_map_file)" />
+		<arg name="laser_assembly_frame" default="$(arg laser_assembly_frame)" />
+		<arg name="number_of_scans_to_assemble_per_cloud" default="$(arg number_of_scans_to_assemble_per_cloud)" />
+		<arg name="timeout_for_cloud_assembly" default="$(arg timeout_for_cloud_assembly)" />
+		<arg name="min_number_of_scans_to_assemble_per_cloud" default="$(arg min_number_of_scans_to_assemble_per_cloud)" />
+		<arg name="max_number_of_scans_to_assemble_per_cloud" default="$(arg max_number_of_scans_to_assemble_per_cloud)" />
+		<arg name="min_timeout_seconds_for_cloud_assembly" default="$(arg min_timeout_seconds_for_cloud_assembly)" />
+		<arg name="max_timeout_seconds_for_cloud_assembly" default="$(arg max_timeout_seconds_for_cloud_assembly)" />
+
+		<arg name="max_linear_velocity" default="$(arg max_linear_velocity)" />
+		<arg name="max_angular_velocity" default="$(arg max_angular_velocity)" />
+		<arg name="publish_last_pose_tf_timeout_seconds" default="$(arg publish_last_pose_tf_timeout_seconds)" />
+
+		<arg name="reference_pointcloud_available" default="$(arg reference_pointcloud_available)" />
+		<arg name="reference_pointcloud_type_3d" default="$(arg reference_pointcloud_type_3d)" />
+		<arg name="reference_pointcloud_update_mode" default="$(arg reference_pointcloud_update_mode)" />
+		<arg name="reference_pointcloud_filename" default="$(arg reference_pointcloud_filename)" if="$(arg use_6_dof)" />
+		<arg name="reference_pointcloud_preprocessed_save_filename" default="$(arg reference_pointcloud_preprocessed_save_filename)" />
+		<arg name="reference_pointcloud_keypoints_filename" default="$(arg reference_pointcloud_keypoints_filename)" if="$(arg load_point_features)" />
+		<arg name="reference_pointcloud_keypoints_save_filename" default="$(arg reference_pointcloud_keypoints_save_filename)" if="$(arg save_point_features)" />
+		<arg name="reference_pointcloud_descriptors_filename" default="$(arg reference_pointcloud_descriptors_filename)" if="$(arg load_point_features)" />
+		<arg name="reference_pointcloud_descriptors_save_filename" default="$(arg reference_pointcloud_descriptors_save_filename)" if="$(arg save_point_features)" />
+	</include>
+
+
+    <!-- === other localization systems === -->
+    <!-- odometry_as_localization_system--> <!-- turned off rn -->
+    <group if="$(arg use_odometry_as_localization_system)">
+		<!-- <node pkg="tf" type="static_transform_publisher" name="map_to_odom" args="$(arg robot_initial_x) $(arg robot_initial_y) $(arg robot_initial_z) $(arg robot_initial_yaw) 0 0 map odom 5" /> -->
+
+		<!-- map to odom publisher -->
+		<include file="$(find pose_to_tf_publisher)/launch/pose_to_tf_publisher.launch">
+			<arg name="initial_pose_in_base_to_map" default="$(arg robot_initial_pose_in_base_to_map)" />
+			<arg name="initial_x" default="$(arg robot_initial_x)" />
+			<arg name="initial_y" default="$(arg robot_initial_y)" />
+			<arg name="initial_z" default="$(arg robot_initial_z)" />
+			<arg name="initial_roll" default="$(arg robot_initial_roll)" />
+			<arg name="initial_pitch" default="$(arg robot_initial_pitch)" />
+			<arg name="initial_yaw" default="$(arg robot_initial_yaw)" />
+			<arg name="pose_with_covariance_stamped_topic" default="" />
+			<arg name="pose_stamped_topic" default="" />
+			<arg name="odometry_topic" default="" />
+			<arg name="map_frame_id" default="$(arg map_odom_only_frame_id)" />
+			<arg name="odom_frame_id" default="$(arg odom_frame_id)" />
+			<arg name="base_link_frame_id" default="$(arg base_link_frame_id)" />
+			<arg name="publish_rate" default="-30.0" />
+			<arg name="publish_initial_pose" default="true" />
+			<arg name="publish_last_pose_tf_timeout_seconds" default="-1.0" />
+			<arg name="invert_tf_transform" default="true" />
+			<arg name="invert_tf_hierarchy" default="true" />
+			<arg name="transform_pose_to_map_frame_id" default="true" />
+			<arg name="parameters_namespace" default="map_odom_only" />
+		</include>
+	</group>
+
+    <!-- asl_icp_mapper --> <!-- turned off rn -->
+	<include file="$(find dynamic_robot_localization_tests)/launch/environments/asl_icp_mapper/ethzasl_icp_mapping_tracker.launch" if="$(arg use_ethzasl_icp_mapper)" >
+		<arg name="initial_x" default="$(arg robot_initial_x)" />
+		<arg name="initial_y" default="$(arg robot_initial_y)" />
+		<arg name="initial_z" default="$(arg robot_initial_z)" />
+		<arg name="initial_roll" default="$(arg robot_initial_roll)" />
+		<arg name="initial_pitch" default="$(arg robot_initial_pitch)" />
+		<arg name="initial_yaw" default="$(arg robot_initial_yaw)" />
+		<arg name="map_filename" default="$(arg reference_pointcloud_filename)" />
+		<arg name="min_registration_overlap" default="$(arg ethzasl_icp_mapper_min_registration_overlap)" />
+		<arg name="ethzasl_icp_mapper_icp_config_filename" default="$(arg ethzasl_icp_mapper_icp_config_filename)" />
+	</include>
+
+    <!-- simulated localization --> <!-- turned off rn -->
+	<include file="$(find dynamic_robot_localization_tests)/launch/localization_systems/amcl_simulated.launch" if="$(arg use_amcl_simulated)" />
+
+    <!-- amcl localization --> <!-- turned off rn -->
+    <!-- hier: download other mcl_3d package! this one is only 2d-->
+	<include file="$(find dynamic_robot_localization_tests)/launch/localization_systems/amcl.launch" if="$(arg use_amcl)">
+		<arg name="robot_initial_x" default="$(arg robot_initial_x)" />
+		<arg name="robot_initial_y" default="$(arg robot_initial_y)" />
+		<arg name="robot_initial_yaw" default="$(arg robot_initial_yaw)" />
+		<arg name="laser_scan_topic" default="$(arg laser_scan_topic_amcl)" />
+		<arg name="map_frame_id" default="$(arg map_frame_id)" />
+		<arg name="odom_frame_id" default="$(arg odom_frame_id)" />
+		<arg name="base_link_frame_id" default="$(arg base_link_frame_id)" />
+	</include>
+
+    <!-- EFK Filter --> <!-- turned off rn -->
+	<include file="$(find dynamic_robot_localization_tests)/launch/localization_systems/ekf.launch" if="$(arg use_ekf)" />
+
+    <!-- SLAM -->
+    <!-- all slam systems --> <!-- all turned off rn-->
+	<include file="$(find dynamic_robot_localization_tests)/launch/slam_systems/gmapping.launch" if="$(arg use_gmapping)" >
+		<arg name="base_link_frame_id" default="$(arg base_link_frame_id)" />
+		<arg name="laser_scan_topic" default="$(arg laser_scan_topic_amcl)" />
+	</include>
+	
+	<include file="$(find dynamic_robot_localization_tests)/launch/slam_systems/hector.launch" if="$(arg use_hector)" >
+		<arg name="base_link_frame_id" default="$(arg base_link_frame_id)" />
+		<arg name="laser_scan_topic" default="$(arg laser_scan_topic_amcl)" />
+	</include>
+	
+	<include file="$(find dynamic_robot_localization_tests)/launch/slam_systems/crsm.launch" if="$(arg use_crsm)" >
+		<arg name="base_link_frame_id" default="$(arg base_link_frame_id)" />
+		<arg name="laser_frame_id" default="$(arg sensor_frame_id)" />
+		<arg name="laser_scan_topic" default="$(arg laser_scan_topic_amcl)" />
+	</include>
+
+
+    <!-- === localization plots === -->
+    <!-- ground truth at it again-->
+    <!--
+    <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="hector_trajectory_server_gt" output="screen">
+		<param name="target_frame_name" value="$(arg localization_ground_truth_frame_id)" />
+		<param name="source_frame_name" value="$(arg base_link_frame_id)" />
+		<param name="trajectory_update_rate" value="30" />
+		<param name="trajectory_publish_rate" value="10" />
+		<remap from="trajectory" to="trajectory_gt" />
+	</node>
+	-->
+    <!-- confusion here about what is what -->
+	<!-- base_link -> map_frame -->
+	<!--
+	<node pkg="hector_trajectory_server" type="hector_trajectory_server" name="hector_trajectory_server" output="screen">
+		<param name="target_frame_name" value="$(arg map_frame_id)" />
+		<param name="source_frame_name" value="$(arg base_link_frame_id)" />
+		<param name="trajectory_update_rate" value="30" />
+		<param name="trajectory_publish_rate" value="10" />
+	</node>
+	-->
+	<!-- base_link -> map_frame_drl -->
+	<!--
+	<node pkg="hector_trajectory_server" type="hector_trajectory_server" name="hector_trajectory_server_drl" output="screen">
+		<param name="target_frame_name" value="$(arg map_frame_id)_drl" />
+		<param name="source_frame_name" value="$(arg base_link_frame_id)" />
+		<param name="trajectory_update_rate" value="30" />
+		<param name="trajectory_publish_rate" value="10" />
+		<remap from="trajectory" to="trajectory_drl" />
+	</node>
+	-->
+	<!-- base_link -> odom-->
+    <!-- maybe have to turn this off, since not using odom-->
+	<!--
+	<node pkg="hector_trajectory_server" type="hector_trajectory_server" name="hector_trajectory_server_odom" output="screen">
+		<param name="target_frame_name" value="$(arg odom_frame_id)" />
+		<param name="source_frame_name" value="$(arg base_link_frame_id)" />
+		<param name="trajectory_update_rate" value="30" />
+		<param name="trajectory_publish_rate" value="10" />
+		<remap from="trajectory" to="trajectory_odom" />
+	</node>
+	-->
+    <!-- plots -->
+	<include file="$(find dynamic_robot_localization_tests)/launch/localization_plots.launch" if="$(arg show_plots)" />
+
+
+    <!-- === navigation systems === -->
+    <!-- definetely not touching this-->
+
+
+</launch>
