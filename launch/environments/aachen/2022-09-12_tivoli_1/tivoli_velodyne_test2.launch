@@ -45,7 +45,7 @@
     <!-- === rosbag playing setting === -->
     <arg name="play_rosbags" default="1" />
 	<arg name="play_rosbags_rate" default="1.0" />
-	<arg name="play_rosbags_options" default="" />
+	<arg name="play_rosbags_options" default="--pause" />
 
     
     <!-- === gazebo configurations === -->
@@ -55,7 +55,7 @@
 
     <!-- === robot configurations === -->
     <arg name="twist_topic" default="" /> <!--- hier -->
-	<arg name="imu_topic" default="" /> <!--- hier: /imu/data ? maybe i need a tf for that -->
+	<arg name="imu_topic" default="/imu/data" /> <!--- hier: /imu/data ? maybe i need a tf for that -->
 	<arg name="odometry_topic" default="" /> <!--- hier -->
 
 

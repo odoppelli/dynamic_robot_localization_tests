@@ -62,6 +62,10 @@ Figure 3: Guardian robot
 Figure 4: Guardian robot simulated in Gazebo
 ```
 
+### Velodyne Puck Sensor
+
+The [Velodyne Puck Sensor](https://velodynelidar.com/products/puck/) is a 360° LIDAR with 100m range. It is being tested in previously generated Maps, provided by the [Kaarta Stencil Platform](https://www.kaarta.com/products/stencil-2-for-rapid-long-range-mobile-mapping/). The LIDAR used by the Stencil Platform is the same, as the one used for 6DoF Localization. The datasets used for 6DoF Localization were recorded while mapping, meaining that, since the Stencil Platform generates a trajectory for each generated map, there is a reference trajectory for the Localization Algorithm to compare to. The datasets, maps and trajectories are available [here](https://fhaachen-my.sharepoint.com/:u:/g/personal/ok9268s_ad_fh-aachen_de/EeuRiC4bjlFIrIX9dnsPc_wBV7-kwI6YU6xV0blTEFw9bQ?download=1) and have to be placed in the right folders.
+
 
 ## Testing environments
 
