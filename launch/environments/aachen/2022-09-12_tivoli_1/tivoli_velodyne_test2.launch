@@ -238,8 +238,9 @@
 	<arg name="timeout_for_cloud_assembly" default="1.0" /> <!-- hier: ?-->
 
     <!-- launching velodyne bridge -->
-	<include file="$(find dynamic_robot_localization_tests)/launch/robots/velodyne_bridge.launch" if="$(arg use_velodyne_driver)" />
-
+	<include file="$(find dynamic_robot_localization_tests)/launch/robots/velodyne_bridge.launch" if="$(arg use_velodyne_driver)" >
+		<arg name="show_rviz_bridge" value="false"/>
+	</include>
 
     <!-- === movement paths ===-->
     <!-- not doing anything, it's turned off by default - i am not changing that-->

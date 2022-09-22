@@ -1,0 +1,6 @@
+    
+<launch>
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se" clear_params="true">
+        <rosparam command="load" file="$(find dynamic_robot_localization_tests)/launch/robots/ekf_imu_velodyne.yaml" />
+    </node>
+</launch>
