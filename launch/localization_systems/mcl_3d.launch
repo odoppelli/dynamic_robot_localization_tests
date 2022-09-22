@@ -1,10 +1,14 @@
 <?xml version="1.0"?>
 <launch>
+  <!-- general localization algorithm settings-->
   <arg name="without_odom" default="true" />
   <arg name="without_imu" default="false" />
   <arg name="use_neonavigation" default="false" />
   <arg name="use_pointcloud_map" default="true" />
+  <arg name="use_rviz" default="false"/>
 
+
+  <!-- map settings-->
   <arg name="use_cad_map" default="false" if="$(arg use_pointcloud_map)" />
   <arg name="use_cad_map" default="true" unless="$(arg use_pointcloud_map)" />
   <arg name="map_objs" unless="$(arg use_pointcloud_map)" />
@@ -15,15 +19,20 @@
   <arg name="map_offset_y" default="0.0" />
   <arg name="generate_test_bag" default="false" />
 
+
+  <!-- bag file-->
   <arg name="use_bag_file" default="true" />
   <arg name="bag_file" default="$(find dynamic_robot_localization_tests)/datasets/aachen/2022-09-12_tivoli_1/tivoli_1_with_tilting_laser.bag" if="$(arg use_bag_file)" />
   <param name="/use_sim_time" value="true" if="$(arg use_bag_file)" />
+
 
   <node pkg="rosbag" type="play" name="playback" args="--clock $(arg bag_file)" if="$(arg use_bag_file)">
     <remap from="odom" to="odom_unused" if="$(arg without_odom)" />
     <remap from="imu/data" to="imu/data_unused" if="$(arg without_imu)" />
   </node>
 
+
+  <!-- config files -->
   <arg name="config_file" default="$(find dynamic_robot_localization_tests)/launch/environments/aachen/2022-09-12_tivoli_1/configs/mcl_3d/test_localization.yaml"
       unless="$(eval arg('without_odom') or arg('without_imu'))" />
   <arg name="config_file" default="$(find dynamic_robot_localization_tests)/launch/environments/aachen/2022-09-12_tivoli_1/configs/mcl_3d/test_localization_noodom.yaml"
@@ -31,6 +40,7 @@
   <arg name="config_file" default="$(find dynamic_robot_localization_tests)/launch/environments/aachen/2022-09-12_tivoli_1/configs/mcl_3d/test_localization_noimu.yaml"
       if="$(arg without_imu)" />
   <rosparam command="load" file="$(arg config_file)"/>
+
 
   <!--
   Required topics
@@ -40,11 +50,15 @@
   -->
   <!-- hier: ummappen von /velodyne_pointcloud auf /cloud-->
 
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find dynamic_robot_localization_tests)/launch/environments/aachen/2022-09-12_tivoli_1/configs/mcl_3d/mcl_3dl_demo.rviz" />
+  <!-- rviz config-->
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find dynamic_robot_localization_tests)/launch/environments/aachen/2022-09-12_tivoli_1/configs/mcl_3d/mcl_3dl_demo.rviz" if="$(arg use_rviz)"/>
   
+
+  <!-- localization algorithm -->
   <node pkg="mcl_3dl" type="mcl_3dl" name="mcl_3dl" output="screen" unless="$(arg generate_test_bag)">
     <param name="compatible" value="1" />
   </node>
+
 
  <!-- pointcloud from cad map -->
   <node pkg="obj_to_pointcloud" type="obj_to_pointcloud" name="obj_to_pointcloud"
@@ -56,11 +70,13 @@
     <remap from="~/cloud" to="mapcloud" />
   </node>
 
-  <!--hier: anderer weg als dauerhaft publishen? -->
   <node pkg="pcl_ros" type="pcd_to_pointcloud" name="pcd_to_pointcloud"
       args="$(arg map_pcd)" if="$(arg use_pointcloud_map)">
     <remap from="cloud_pcd" to="mapcloud" />
   </node>
+
+
+
 
   <node pkg="trajectory_tracker" type="trajectory_recorder" name="path_recorder"
       if="$(arg use_neonavigation)">
